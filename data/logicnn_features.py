@@ -38,6 +38,7 @@ def extract_but(revs):
             fea = ''
         but_fea.append(fea)
     print '#but %d' % but_fea_cnt
+    print 'hallo!'
     return {'but_text': but_fea, 'but_ind': but_ind}
 
 if __name__=="__main__":
