@@ -58,7 +58,7 @@ def extract_features(revs):
             fea_after = ''
             fea_before = ''
         nt_fea_after.append(fea_after)
-        nt_fea_after.append(fea_before)
+        nt_fea_before.append(fea_before)
 
     print '#but %d' % but_fea_cnt
     print '#n\'t %d' % nt_fea_cnt
