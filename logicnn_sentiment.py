@@ -300,9 +300,9 @@ def train_conv_net(datasets,
         val_q_perf = 1 - np.mean(val_losses[:, 0])
         val_p_perf = 1 - np.mean(val_losses[:, 1])
         print(
-        'epoch: %i, training time: %.2f secs; (q): train perf: %.4f %%, val perf: %.4f %%; (p): train perf: %.4f %%, val perf: %.4f %%' % \
-        (epoch, time.time() - start_time, train_q_perf * 100., val_q_perf * 100., train_p_perf * 100.,
-         val_p_perf * 100.))
+            'epoch: %i, training time: %.2f secs; (q): train perf: %.4f %%, val perf: %.4f %%; (p): train perf: %.4f %%, val perf: %.4f %%' % \
+            (epoch, time.time() - start_time, train_q_perf * 100., val_q_perf * 100., train_p_perf * 100.,
+             val_p_perf * 100.))
         test_loss = test_model_all(test_set_x, test_set_y, test_fea['but'], test_fea_but_ind)
         test_loss = np.array(test_loss)
         test_perf = 1 - test_loss
@@ -419,9 +419,11 @@ def get_idx_from_sent(sent, word_idx_map, max_l=51, k=300, filter_h=5):
 # 'but'-rule feature
 def get_idx_from_but_fea(but_fea, but_ind, word_idx_map, max_l=51, k=300, filter_h=5):
     if but_ind == 0:
+        # set feature to zero
         pad = filter_h - 1
         x = [0] * (max_l + 2 * pad)
     else:
+        # set feature to indexes from feature
         x = get_idx_from_sent(but_fea, word_idx_map, max_l, k, filter_h)
     return x
 
@@ -434,12 +436,26 @@ def make_idx_data(revs, fea, word_idx_map, max_l=51, k="Not used!", filter_h=5):
     train_text, dev_text, test_text = [], [], []
     train_fea, dev_fea, test_fea = {}, {}, {}
     fea['but'] = []
+    fea['nt_before'] = []
+    fea['nt_after'] = []
     for k in fea.keys():
         train_fea[k], dev_fea[k], test_fea[k] = [], [], []
     for i, rev in enumerate(revs):
+
+        # Transforms sentence into a list of indices. Pad with zeroes.
         sent = get_idx_from_sent(rev["text"], word_idx_map, max_l, "Not used!", filter_h)
         sent.append(rev["y"])
+        # print sent
+        # exit()
+
+
         fea['but'].append(get_idx_from_but_fea(fea['but_text'][i], fea['but_ind'][i], word_idx_map, max_l, k, filter_h))
+        fea['nt_before'].append(
+            get_idx_from_but_fea(fea['nt_text_before'][i], fea['nt_ind'][i], word_idx_map, max_l, k, filter_h))
+        fea['nt_after'].append(
+            get_idx_from_but_fea(fea['nt_text_after'][i], fea['nt_ind'][i], word_idx_map, max_l, k, filter_h))
+
+        # Assign to train, dev and testset
         if rev["split"] == 0:
             train.append(sent)
             for k, v in fea.iteritems():
@@ -459,11 +475,11 @@ def make_idx_data(revs, fea, word_idx_map, max_l=51, k="Not used!", filter_h=5):
     dev = np.array(dev, dtype="int")
     test = np.array(test, dtype="int")
     for k in fea.keys():
-        if k == 'but':
+        if k == 'but' or k == 'nt_before' or k == 'nt_after':
             train_fea[k] = np.array(train_fea[k], dtype='int')
             dev_fea[k] = np.array(dev_fea[k], dtype='int')
             test_fea[k] = np.array(test_fea[k], dtype='int')
-        elif k == 'but_text':
+        elif k == 'but_text' or k == 'nt_before_text' or k == 'nt_after_text':
             train_fea[k] = np.array(train_fea[k])
             dev_fea[k] = np.array(dev_fea[k])
             test_fea[k] = np.array(test_fea[k])
@@ -515,9 +531,8 @@ if __name__ == "__main__":
     # word_idx_map
 
     print word_idx_map['unimaginative']  # {'unimaginative': 1}
-    print vocab.values()[0:100]                     # [0.0, 0.0,
+    print vocab.values()[0:100]  # [0.0, 0.0,
     print "\n\n\n\n\n"
-
 
     print "data loaded!"
     print "loading features..."
