@@ -37,6 +37,7 @@ def extract_but(revs):
             but_ind.append(0)
             fea = ''
         but_fea.append(fea)
+        # Add nt feature
     print '#but %d' % but_fea_cnt
     return {'but_text': but_fea, 'but_ind': but_ind}
 
