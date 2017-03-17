@@ -12,7 +12,8 @@ import warnings
 import sys
 import time
 
-warnings.filterwarnings("ignore")   
+warnings.filterwarnings("ignore")
+
 
 def text_after_first(text, part):
     if part in text:
@@ -20,10 +21,15 @@ def text_after_first(text, part):
     else:
         return ''
 
-def extract_but(revs):
+
+def extract_features(revs):
     but_fea = []
     but_ind = []
     but_fea_cnt = 0
+    nt_fea_before = []
+    nt_fea_after = []
+    nt_ind = []
+    nt_fea_cnt = 0
     for rev in revs:
         text = rev["text"]
         if ' but ' in text:
@@ -37,14 +43,38 @@ def extract_but(revs):
             but_ind.append(0)
             fea = ''
         but_fea.append(fea)
-        # Add nt feature
-    print '#but %d' % but_fea_cnt
-    return {'but_text': but_fea, 'but_ind': but_ind}
+        if " n't " in text:
+            nt_ind.append(1)
+            # make the text after 'but' as the feature
+            fea_after = text.split("n't")[1:]
+            fea_before = text.split("n't")[:1]
+            fea_after = ''.join(fea_after)
+            fea_before = ''.join(fea_before)
+            fea_after = fea_after.strip().replace('  ', ' ')
+            fea_before = fea_before.strip().replace('  ', ' ')
+            nt_fea_cnt += 1
+        else:
+            nt_ind.append(0)
+            fea_after = ''
+            fea_before = ''
+        nt_fea_after.append(fea_after)
+        nt_fea_after.append(fea_before)
 
-if __name__=="__main__":
+    print '#but %d' % but_fea_cnt
+    print '#n\'t %d' % nt_fea_cnt
+    return {
+        'but_text': but_fea,
+        'but_ind': but_ind,
+        'nt_before_text': nt_fea_before,
+        'nt_after_text': nt_fea_after,
+        'nt_ind': nt_ind,
+    }
+
+
+if __name__ == "__main__":
     data_file = sys.argv[1]
     print "loading data..."
-    x = cPickle.load(open(data_file,"rb"))
+    x = cPickle.load(open(data_file, "rb"))
     revs, W, W2, word_idx_map, vocab = x[0], x[1], x[2], x[3], x[4]
     """
                     len     description
@@ -55,7 +85,6 @@ if __name__=="__main__":
     vocab           17237   number of occurence per word ({'and': 20807.0})
     """
     print "data loaded!"
-    but_fea = extract_but(revs)
-    cPickle.dump(but_fea, open("%s.fea.p" % data_file, "wb"))
+    fea = extract_features(revs)
+    cPickle.dump(fea, open("%s.fea.p" % data_file, "wb"))
     print "feature dumped!"
-
