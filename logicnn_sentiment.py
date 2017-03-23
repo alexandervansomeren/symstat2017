@@ -44,7 +44,7 @@ def train_conv_net(datasets,
     Train a convnet through iterative distillation
     img_h = sentence length (padded where necessary)
     img_w = word vector length (300 for word2vec)
-    filter_hs = filter window sizes    
+    filter_hs = filter window sizes
     hidden_units = [x,y] x is the number of feature maps (per filter window), and y is the penultimate layer
     sqr_norm_lim = s^2 in the paper [Kim, 2014]
     lr_decay = adadelta decay parameter
@@ -93,6 +93,12 @@ def train_conv_net(datasets,
                             dropout_rates=dropout_rate)
 
     # build the feature of BUT-rule
+    """
+    Build the feature input to FOL_BUT, which is  the sentiment of B-part in A-but-B sentences, as well as the indicator
+    of whether the but-rule applies to a sentence (so the feature matrix f_but_full has 1+K columns, where K is the
+    number of sentiment classes). So in your case, you may need to compute the sentiment of both A and B parts, and
+    concatenate to get the feature matrix (which probably has 1+2*K columns) for rule evaluation.
+    """
     f_but = T.fmatrix('f_but')
     f_but_ind = T.fmatrix('f_ind')  # indicators
     f_but_layer0_input = Words[T.cast(f_but.flatten(), dtype="int32")].reshape(
@@ -106,9 +112,23 @@ def train_conv_net(datasets,
     f_but_full = T.concatenate([f_but_ind, f_but_y_pred_p], axis=1)  # batch_size x 1 + batch_size x K
     f_but_full = theano.gradient.disconnected_grad(f_but_full)
 
+    # build the feature of NT-rule
+    f_nt = T.fmatrix('f_nt')
+    f_nt_ind = T.fmatrix('f_nt_ind')  # indicators
+    f_nt_layer0_input = Words[T.cast(f_nt.flatten(), dtype="int32")].reshape(
+        (f_nt.shape[0], 1, f_nt.shape[1], Words.shape[1]))
+    f_nt_pred_layers = []
+    for conv_layer in conv_layers:
+        f_nt_layer0_output = conv_layer.predict(f_nt_layer0_input, batch_size)
+        f_nt_pred_layers.append(f_nt_layer0_output.flatten(2))
+    f_nt_layer1_input = T.concatenate(f_nt_pred_layers, 1)
+    f_nt_y_pred_p = classifier.predict_p(f_nt_layer1_input)
+    f_nt_full = T.concatenate([f_nt_ind, f_nt_y_pred_p], axis=1)  # batch_size x 1 + batch_size x K
+    f_nt_full = theano.gradient.disconnected_grad(f_nt_full)
+
     # add logic layer
     nclasses = 2
-    rules = [FOL_But_test(nclasses, x, f_but_full)]
+    rules = [FOL_But(nclasses, x, f_but_full), FOL_NT(nclasses, x, f_nt_full)]
     rule_lambda = [1]
     new_pi = get_pi(cur_iter=0, params=pi_params)
     logic_nn = LogicNN(rng, input=x, network=classifier, rules=rules, rule_lambda=rule_lambda, pi=new_pi, C=C)
@@ -161,8 +181,10 @@ def train_conv_net(datasets,
     train_fea = new_fea
     train_fea_but_ind = train_fea['but_ind'].reshape([train_fea['but_ind'].shape[0], 1])
     train_fea_but_ind = shared_fea(train_fea_but_ind)
+    train_fea_nt_ind = train_fea['nt_ind'].reshape([train_fea['nt_ind'].shape[0], 1])
+    train_fea_nt_ind = shared_fea(train_fea_nt_ind)
     for k in new_fea.keys():
-        if k != 'but_text':
+        if not k in ['but_text', 'nt_before_text', 'nt_after_text']:
             train_fea[k] = shared_fea(new_fea[k])
 
     # val data
@@ -193,8 +215,10 @@ def train_conv_net(datasets,
     val_fea = new_val_fea
     val_fea_but_ind = val_fea['but_ind'].reshape([val_fea['but_ind'].shape[0], 1])
     val_fea_but_ind = shared_fea(val_fea_but_ind)
+    val_fea_nt_ind = val_fea['nt_ind'].reshape([val_fea['nt_ind'].shape[0], 1])
+    val_fea_nt_ind = shared_fea(val_fea_nt_ind)
     for k in val_fea.keys():
-        if k != 'but_text':
+        if not k in ['but_text', 'nt_before_text', 'nt_after_text']:
             val_fea[k] = shared_fea(val_fea[k])
 
     # test data
@@ -203,6 +227,8 @@ def train_conv_net(datasets,
     test_fea = datasets[5]
     test_fea_but_ind = test_fea['but_ind']
     test_fea_but_ind = test_fea_but_ind.reshape([test_fea_but_ind.shape[0], 1])
+    test_fea_nt_ind = test_fea['nt_ind'].reshape([test_fea['nt_ind'].shape[0], 1])
+    test_fea_nt_ind = shared_fea(test_fea_nt_ind)
     test_text = datasets[8]
 
     ### compile theano functions to get train/val/test errors
@@ -211,7 +237,9 @@ def train_conv_net(datasets,
                                     x: val_set_x[index * batch_size: (index + 1) * batch_size],
                                     y: val_set_y[index * batch_size: (index + 1) * batch_size],
                                     f_but: val_fea['but'][index * batch_size: (index + 1) * batch_size],
-                                    f_but_ind: val_fea_but_ind[index * batch_size: (index + 1) * batch_size, :]},
+                                    f_nt: val_fea['nt_before'][index * batch_size: (index + 1) * batch_size],
+                                    f_but_ind: val_fea_but_ind[index * batch_size: (index + 1) * batch_size, :],
+                                    f_nt_ind: val_fea_nt_ind[index * batch_size: (index + 1) * batch_size, :]},
                                 allow_input_downcast=True,
                                 on_unused_input='warn')
 
@@ -220,7 +248,9 @@ def train_conv_net(datasets,
                                      x: train_set_x[index * batch_size: (index + 1) * batch_size],
                                      y: train_set_y[index * batch_size: (index + 1) * batch_size],
                                      f_but: train_fea['but'][index * batch_size: (index + 1) * batch_size],
-                                     f_but_ind: train_fea_but_ind[index * batch_size: (index + 1) * batch_size, :]},
+                                     f_nt: train_fea['nt'][index * batch_size: (index + 1) * batch_size],
+                                     f_but_ind: train_fea_but_ind[index * batch_size: (index + 1) * batch_size, :],
+                                     f_nt_ind: train_fea_nt_ind[index * batch_size: (index + 1) * batch_size, :]},
                                  allow_input_downcast=True,
                                  on_unused_input='warn')
 
@@ -229,7 +259,9 @@ def train_conv_net(datasets,
                                       x: train_set_x[index * batch_size:(index + 1) * batch_size],
                                       y: train_set_y[index * batch_size:(index + 1) * batch_size],
                                       f_but: train_fea['but'][index * batch_size: (index + 1) * batch_size],
-                                      f_but_ind: train_fea_but_ind[index * batch_size: (index + 1) * batch_size, :]},
+                                      f_nt: train_fea['nt'][index * batch_size: (index + 1) * batch_size],
+                                      f_but_ind: train_fea_but_ind[index * batch_size: (index + 1) * batch_size, :],
+                                      f_nt_ind: train_fea_nt_ind[index * batch_size: (index + 1) * batch_size, :]},
                                   allow_input_downcast=True,
                                   on_unused_input='warn')
 
@@ -251,12 +283,26 @@ def train_conv_net(datasets,
     f_but_test_y_pred_p = classifier.predict_p(f_but_test_layer1_input)
     f_but_test_full = T.concatenate([f_but_ind, f_but_test_y_pred_p], axis=1)  # Ns x 1 + Ns x K
 
+    # NT full
+    f_nt_test_pred_layers = []
+    f_nt_test_layer0_input = Words[T.cast(f_nt.flatten(), dtype="int32")].reshape(
+        (test_size, 1, img_h, Words.shape[1]))
+    for conv_layer in conv_layers:
+        test_layer0_output = conv_layer.predict(test_layer0_input, test_size)
+        test_pred_layers.append(test_layer0_output.flatten(2))
+        f_nt_test_layer0_output = conv_layer.predict(f_nt_test_layer0_input, test_size)
+        f_nt_test_pred_layers.append(f_nt_test_layer0_output.flatten(2))
+    test_layer1_input = T.concatenate(test_pred_layers, 1)
+    f_nt_test_layer1_input = T.concatenate(f_nt_test_pred_layers, 1)
+    f_nt_test_y_pred_p = classifier.predict_p(f_nt_test_layer1_input)
+    f_nt_test_full = T.concatenate([f_nt_ind, f_nt_test_y_pred_p], axis=1)  # Ns x 1 + Ns x K
+
     # transform to shared variables
     test_set_x_shr, test_set_y_shr = shared_dataset((test_set_x, test_set_y))
 
     test_q_y_pred, test_p_y_pred = logic_nn.predict(test_layer1_input,
                                                     test_set_x_shr,
-                                                    [f_but_test_full])
+                                                    [f_but_test_full, f_nt_test_full])
     test_q_error = T.mean(T.neq(test_q_y_pred, y))
     test_p_error = T.mean(T.neq(test_p_y_pred, y))
     test_model_all = theano.function([x, y, f_but, f_but_ind],
@@ -345,9 +391,10 @@ def shared_dataset(data_xy, borrow=True):
 
 
 def shared_fea(fea, borrow=True):
-    """ 
+    """
     Function that loads the features into shared variables
     """
+    print fea[1]
     shared_fea = theano.shared(np.asarray(fea,
                                           dtype=theano.config.floatX),
                                borrow=borrow)
@@ -448,12 +495,11 @@ def make_idx_data(revs, fea, word_idx_map, max_l=51, k="Not used!", filter_h=5):
         # print sent
         # exit()
 
-
         fea['but'].append(get_idx_from_but_fea(fea['but_text'][i], fea['but_ind'][i], word_idx_map, max_l, k, filter_h))
         fea['nt_before'].append(
-            get_idx_from_but_fea(fea['nt_text_before'][i], fea['nt_ind'][i], word_idx_map, max_l, k, filter_h))
+            get_idx_from_but_fea(fea['nt_before_text'][i], fea['nt_ind'][i], word_idx_map, max_l, k, filter_h))
         fea['nt_after'].append(
-            get_idx_from_but_fea(fea['nt_text_after'][i], fea['nt_ind'][i], word_idx_map, max_l, k, filter_h))
+            get_idx_from_but_fea(fea['nt_after_text'][i], fea['nt_ind'][i], word_idx_map, max_l, k, filter_h))
 
         # Assign to train, dev and testset
         if rev["split"] == 0:
@@ -484,6 +530,7 @@ def make_idx_data(revs, fea, word_idx_map, max_l=51, k="Not used!", filter_h=5):
             dev_fea[k] = np.array(dev_fea[k])
             test_fea[k] = np.array(test_fea[k])
         else:
+            print 'key:', k
             train_fea[k] = np.array(train_fea[k], dtype=theano.config.floatX)
             dev_fea[k] = np.array(dev_fea[k], dtype=theano.config.floatX)
             test_fea[k] = np.array(test_fea[k], dtype=theano.config.floatX)
