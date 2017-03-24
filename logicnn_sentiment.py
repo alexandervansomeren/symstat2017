@@ -328,7 +328,7 @@ def train_conv_net(datasets,
     f_nt_before_test_y_pred_p = classifier.predict_p(f_nt_before_test_layer1_input)
     f_nt_after_test_y_pred_p = classifier.predict_p(f_nt_after_test_layer1_input)
     f_nt_test_full = T.concatenate([f_nt_ind, f_nt_before_test_y_pred_p, f_nt_after_test_y_pred_p],
-                                   axis=1)  # Ns x 1 + Ns x K
+                                   axis=1)  # Ns x 2 + Ns x K
 
     # transform to shared variables
     test_set_x_shr, test_set_y_shr = shared_dataset((test_set_x, test_set_y))
@@ -383,8 +383,6 @@ def train_conv_net(datasets,
             (epoch, time.time() - start_time, train_q_perf * 100., val_q_perf * 100., train_p_perf * 100.,
              val_p_perf * 100.))
         print test_fea.keys()
-        print test_set_x.shape
-        print test_set_y.shape
         test_loss = test_model_all(test_set_x, test_set_y, test_fea['but'], test_fea_but_ind, test_fea['nt_before'],
                                    test_fea['nt_after'], test_fea_nt_ind)
         test_loss = np.array(test_loss)
