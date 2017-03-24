@@ -218,6 +218,7 @@ class FOL_NT(FOL):
     :param fea: symbolic feature tensor, of shape 3
                 fea[0]   : 1 if x=x1_but_x2, 0 otherwise
                 fea[1:2] : classifier.predict_p(x_2)
+                fea[3:4] : classifier.predict_p(x_1)
     """
         assert K == 2
         super(FOL_NT, self).__init__(K, input, fea)
@@ -235,7 +236,9 @@ class FOL_NT(FOL):
         x_printed = theano.printing.Print('Hallo, in theano! Dit is x: ')(x)
         f_printed = theano.printing.Print('Hallo, in theano! Dit is f: ')(f)
         y_printed = theano.printing.Print('Hallo, in theano! Dit is y: ')(y)
-        ret = T.max([T.min([1. - y_printed + f_printed[2], 1.]) + T.min([1. - f[2] + y, 1.]) - 1, 0])
+        r1 = T.max([T.min([1. - y_printed + f_printed[2], 1.]) + T.min([1. - f[2] + y, 1.]) - 1, 0])
+        r2 = T.max([T.min([1. - y_printed + f_printed[4], 1.]) + T.min([1. - f[4] + y, 1.]) - 1, 0])
+        ret = T.mean(r1,r2)
         ret = T.cast(ret, dtype=theano.config.floatX)
         return T.cast(ifelse(T.eq(self.condition_single(x_printed, f), 1.), ret, 1.),
                       dtype=theano.config.floatX)
