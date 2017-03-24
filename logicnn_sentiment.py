@@ -108,7 +108,7 @@ def train_conv_net(datasets,
 
     # add logic layer
     nclasses = 2
-    rules = [FOL_But_test(nclasses, x, f_but_full)]
+    rules = [FOL_But(nclasses, x, f_but_full)]
     rule_lambda = [1]
     new_pi = get_pi(cur_iter=0, params=pi_params)
     logic_nn = LogicNN(rng, input=x, network=classifier, rules=rules, rule_lambda=rule_lambda, pi=new_pi, C=C)
@@ -547,9 +547,9 @@ if __name__ == "__main__":
     q_results = []
     p_results = []
     datasets = make_idx_data(revs, fea, word_idx_map, max_l=53, k="Not used!", filter_h=5)
-    train_size = 14000
-    dev_size = 100
-    test_size = 200
+    train_size = 25000
+    # dev_size = 100
+    # test_size = 200
     datasets[0] = datasets[0][:train_size]  # 76961
     # datasets[1] = datasets[1][:dev_size]    # 872
     # datasets[2] = datasets[2][:test_size]   # 1821
@@ -569,12 +569,12 @@ if __name__ == "__main__":
                           conv_non_linear="relu",
                           hidden_units=[100, 2],  # hidden_units=[100,2]
                           shuffle_batch=True,
-                          n_epochs=2,  # 20
+                          n_epochs=20,  # 20
                           sqr_norm_lim=9,
                           non_static=non_static,
                           batch_size=50,
                           dropout_rate=[0.4],
-                          pi_params=[0.95, 0],
+                          pi_params=[0, 0],
                           C=6.,
                           patience=5)  # 20
     q_results.append(perf[0])
