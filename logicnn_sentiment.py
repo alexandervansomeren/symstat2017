@@ -113,18 +113,31 @@ def train_conv_net(datasets,
     f_but_full = theano.gradient.disconnected_grad(f_but_full)
 
     # build the feature of NT-rule
-    f_nt = T.fmatrix('f_nt')
+    f_nt_before = T.fmatrix('f_nt_before')
+    f_nt_after = T.fmatrix('f_nt_after')
     f_nt_ind = T.fmatrix('f_nt_ind')  # indicators
-    f_nt_layer0_input = Words[T.cast(f_nt.flatten(), dtype="int32")].reshape(
-        (f_nt.shape[0], 1, f_nt.shape[1], Words.shape[1]))
-    f_nt_pred_layers = []
+    f_nt_before_printed = theano.printing.Print('Hallo, in theano! Dit is fn_before.shape: ')(f_nt_before)
+    f_nt_after_shape_printed = theano.printing.Print('Hallo, in theano! Dit is fn_after.shape: ')(f_nt_after.shape)
+    f_nt_before_layer0_input = Words[T.cast(f_nt_before.flatten(), dtype="int32")].reshape(
+        (f_nt_before.shape[0], 1, f_nt_before.shape[1], Words.shape[1]))
+    f_nt_after_layer0_input = Words[T.cast(f_nt_after.flatten(), dtype="int32")].reshape(
+        (f_nt_after_shape_printed[0], 1, f_nt_after.shape[1], Words.shape[1]))
+    f_nt_before_pred_layers = []
+    f_nt_after_pred_layers = []
     for conv_layer in conv_layers:
-        f_nt_layer0_output = conv_layer.predict(f_nt_layer0_input, batch_size)
-        f_nt_pred_layers.append(f_nt_layer0_output.flatten(2))
-    f_nt_layer1_input = T.concatenate(f_nt_pred_layers, 1)
-    f_nt_y_pred_p = classifier.predict_p(f_nt_layer1_input)
-    f_nt_full = T.concatenate([f_nt_ind, f_nt_y_pred_p], axis=1)  # batch_size x 1 + batch_size x K
-    f_nt_full = theano.gradient.disconnected_grad(f_nt_full)
+        f_nt_before_layer0_output = conv_layer.predict(f_nt_before_layer0_input, batch_size)
+        f_nt_after_layer0_output = conv_layer.predict(f_nt_after_layer0_input, batch_size)
+        f_nt_before_pred_layers.append(f_nt_before_layer0_output.flatten(2))
+        f_nt_after_pred_layers.append(f_nt_after_layer0_output.flatten(2))
+    f_nt_before_layer1_input = T.concatenate(f_nt_before_pred_layers, 1)
+    f_nt_after_layer1_input = T.concatenate(f_nt_after_pred_layers, 1)
+    f_nt_before_y_pred_p = classifier.predict_p(f_nt_before_layer1_input)
+    f_nt_after_y_pred_p = classifier.predict_p(f_nt_after_layer1_input)
+    f_nt_before_y_pred_p_printed = theano.printing.Print('Hallo, in theano! Dit is f_nt_before_y_pred: ')(f_nt_before_y_pred_p)
+    f_nt_after_y_pred_p_printed = theano.printing.Print('Hallo, in theano! Dit is f_nt_after_y_pred: ')(f_nt_after_y_pred_p)
+    f_nt_full = T.concatenate([f_nt_ind, f_nt_before_y_pred_p_printed, f_nt_after_y_pred_p_printed], axis=1)  # batch_size x 1 + batch_size x K
+    f_nt_full_printed = theano.printing.Print('Hallo, in theano! Dit is f_nt_full: ')(f_nt_full)
+    f_nt_full = theano.gradient.disconnected_grad(f_nt_full_printed)
 
     # add logic layer
     nclasses = 2
@@ -237,7 +250,8 @@ def train_conv_net(datasets,
                                     x: val_set_x[index * batch_size: (index + 1) * batch_size],
                                     y: val_set_y[index * batch_size: (index + 1) * batch_size],
                                     f_but: val_fea['but'][index * batch_size: (index + 1) * batch_size],
-                                    f_nt: val_fea['nt_before'][index * batch_size: (index + 1) * batch_size],
+                                    f_nt_before: val_fea['nt_before'][index * batch_size: (index + 1) * batch_size],
+                                    f_nt_after: val_fea['nt_after'][index * batch_size: (index + 1) * batch_size],
                                     # f_nt: T.concatenate(
                                     #     [val_fea['nt_before'][index * batch_size: (index + 1) * batch_size],
                                     #      val_fea['nt_after'][index * batch_size: (index + 1) * batch_size]], 1),
@@ -252,7 +266,8 @@ def train_conv_net(datasets,
                                      x: train_set_x[index * batch_size: (index + 1) * batch_size],
                                      y: train_set_y[index * batch_size: (index + 1) * batch_size],
                                      f_but: train_fea['but'][index * batch_size: (index + 1) * batch_size],
-                                     f_nt: train_fea['nt_before'][index * batch_size: (index + 1) * batch_size],
+                                     f_nt_before: train_fea['nt_before'][index * batch_size: (index + 1) * batch_size],
+                                     f_nt_after: train_fea['nt_after'][index * batch_size: (index + 1) * batch_size],
                                      # f_nt: T.concatenate(
                                      #     [train_fea['nt_before'][index * batch_size: (index + 1) * batch_size],
                                      #      train_fea['nt_before'][index * batch_size: (index + 1) * batch_size]], 1),
@@ -266,7 +281,9 @@ def train_conv_net(datasets,
                                       x: train_set_x[index * batch_size:(index + 1) * batch_size],
                                       y: train_set_y[index * batch_size:(index + 1) * batch_size],
                                       f_but: train_fea['but'][index * batch_size: (index + 1) * batch_size],
-                                      f_nt: train_fea['nt_before'][index * batch_size: (index + 1) * batch_size],
+                                      f_nt_before: train_fea['nt_before'][index * batch_size: (index + 1) * batch_size],
+                                      f_nt_after: train_fea['nt_after'][index * batch_size: (index + 1) * batch_size],
+                                      #f_nt_before: train_fea['nt_before'][index * batch_size: (index + 1) * batch_size],
                                       # f_nt: T.concatenate(
                                       #     [train_fea['nt_before'][index * batch_size: (index + 1) * batch_size],
                                       #      train_fea['nt_before'][index * batch_size: (index + 1) * batch_size]], 0),
@@ -280,6 +297,7 @@ def train_conv_net(datasets,
     print 'test size ', test_size
     test_pred_layers = []
     test_layer0_input = Words[T.cast(x.flatten(), dtype="int32")].reshape((test_size, 1, img_h, Words.shape[1]))
+
     f_but_test_pred_layers = []
     f_but_test_layer0_input = Words[T.cast(f_but.flatten(), dtype="int32")].reshape(
         (test_size, 1, img_h, Words.shape[1]))
@@ -294,18 +312,21 @@ def train_conv_net(datasets,
     f_but_test_full = T.concatenate([f_but_ind, f_but_test_y_pred_p], axis=1)  # Ns x 1 + Ns x K
 
     # NT full
-    f_nt_test_pred_layers = []
-    f_nt_test_layer0_input = Words[T.cast(f_nt.flatten(), dtype="int32")].reshape(
+    f_nt_before_test_pred_layers = []
+    f_nt_after_test_pred_layers = []
+    f_nt_before_test_layer0_input = Words[T.cast(f_nt_before.flatten(), dtype="int32")].reshape(
         (test_size, 1, img_h, Words.shape[1]))
-    for conv_layer in conv_layers:
-        test_layer0_output = conv_layer.predict(test_layer0_input, test_size)
-    test_pred_layers.append(test_layer0_output.flatten(2))
-    f_nt_test_layer0_output = conv_layer.predict(f_nt_test_layer0_input, test_size)
-    f_nt_test_pred_layers.append(f_nt_test_layer0_output.flatten(2))
-    test_layer1_input = T.concatenate(test_pred_layers, 1)
-    f_nt_test_layer1_input = T.concatenate(f_nt_test_pred_layers, 1)
-    f_nt_test_y_pred_p = classifier.predict_p(f_nt_test_layer1_input)
-    f_nt_test_full = T.concatenate([f_nt_ind, f_nt_test_y_pred_p], axis=1)  # Ns x 1 + Ns x K
+    f_nt_after_test_layer0_input = Words[T.cast(f_nt_after.flatten(), dtype="int32")].reshape(
+        (test_size, 1, img_h, Words.shape[1]))
+    f_nt_test_before_layer0_output = conv_layer.predict(f_nt_before_test_layer0_input, test_size)
+    f_nt_test_after_layer0_output = conv_layer.predict(f_nt_after_test_layer0_input, test_size)
+    f_nt_before_test_pred_layers.append(f_nt_test_before_layer0_output.flatten(2))
+    f_nt_after_test_pred_layers.append(f_nt_test_after_layer0_output.flatten(2))
+    f_nt_before_test_layer1_input = T.concatenate(f_nt_before_test_pred_layers, 1)
+    f_nt_after_test_layer1_input = T.concatenate(f_nt_after_test_pred_layers, 1)
+    f_nt_before_test_y_pred_p = classifier.predict_p(f_nt_before_test_layer1_input)
+    f_nt_after_test_y_pred_p = classifier.predict_p(f_nt_after_test_layer1_input)
+    f_nt_test_full = T.concatenate([f_nt_ind, f_nt_before_test_y_pred_p, f_nt_after_test_y_pred_p], axis=1)  # Ns x 1 + Ns x K
 
     # transform to shared variables
     test_set_x_shr, test_set_y_shr = shared_dataset((test_set_x, test_set_y))
@@ -315,7 +336,7 @@ def train_conv_net(datasets,
                                                     [f_but_test_full, f_nt_test_full])
     test_q_error = T.mean(T.neq(test_q_y_pred, y))
     test_p_error = T.mean(T.neq(test_p_y_pred, y))
-    test_model_all = theano.function([x, y, f_but, f_but_ind, f_nt, f_nt_ind],
+    test_model_all = theano.function([x, y, f_but, f_but_ind, f_nt_before, f_nt_after, f_nt_ind],
                                      [test_q_error, test_p_error], allow_input_downcast=True,
                                      on_unused_input='warn')
 
