@@ -135,7 +135,8 @@ def train_conv_net(datasets,
     f_nt_after_y_pred_p = classifier.predict_p(f_nt_after_layer1_input)
     # f_nt_before_y_pred_p_printed = theano.printing.Print('Hallo, in theano! Dit is f_nt_before_y_pred: ')(f_nt_before_y_pred_p)
     # f_nt_after_y_pred_p_printed = theano.printing.Print('Hallo, in theano! Dit is f_nt_after_y_pred: ')(f_nt_after_y_pred_p)
-    f_nt_full = T.concatenate([f_nt_ind, f_nt_before_y_pred_p, f_nt_after_y_pred_p], axis=1)  # batch_size x 1 + batch_size x K
+    f_nt_full = T.concatenate([f_nt_ind, f_nt_before_y_pred_p, f_nt_after_y_pred_p],
+                              axis=1)  # batch_size x 1 + batch_size x K
     # f_nt_full_printed = theano.printing.Print('Hallo, in theano! Dit is f_nt_full: ')(f_nt_full)
     f_nt_full = theano.gradient.disconnected_grad(f_nt_full)
 
@@ -231,7 +232,7 @@ def train_conv_net(datasets,
     val_fea_nt_ind = val_fea['nt_ind'].reshape([val_fea['nt_ind'].shape[0], 1])
     val_fea_nt_ind = shared_fea(val_fea_nt_ind)
     for k in val_fea.keys():
-        if not k in ['but_text', 'nt_before_text', 'nt_after_text']:
+        if k not in ['but_text', 'nt_before_text', 'nt_after_text']:
             val_fea[k] = shared_fea(val_fea[k])
 
     # test data
@@ -240,8 +241,8 @@ def train_conv_net(datasets,
     test_fea = datasets[5]
     test_fea_but_ind = test_fea['but_ind']
     test_fea_but_ind = test_fea_but_ind.reshape([test_fea_but_ind.shape[0], 1])
-    test_fea_nt_ind = test_fea['nt_ind'].reshape([test_fea['nt_ind'].shape[0], 1])
-    test_fea_nt_ind = shared_fea(test_fea_nt_ind)
+    test_fea_nt_ind = test_fea['nt_ind']
+    test_fea_nt_ind = test_fea_nt_ind.reshape([test_fea_nt_ind.shape[0], 1])
     test_text = datasets[8]
 
     ### compile theano functions to get train/val/test errors
@@ -283,7 +284,7 @@ def train_conv_net(datasets,
                                       f_but: train_fea['but'][index * batch_size: (index + 1) * batch_size],
                                       f_nt_before: train_fea['nt_before'][index * batch_size: (index + 1) * batch_size],
                                       f_nt_after: train_fea['nt_after'][index * batch_size: (index + 1) * batch_size],
-                                      #f_nt_before: train_fea['nt_before'][index * batch_size: (index + 1) * batch_size],
+                                      # f_nt_before: train_fea['nt_before'][index * batch_size: (index + 1) * batch_size],
                                       # f_nt: T.concatenate(
                                       #     [train_fea['nt_before'][index * batch_size: (index + 1) * batch_size],
                                       #      train_fea['nt_before'][index * batch_size: (index + 1) * batch_size]], 0),
@@ -326,7 +327,8 @@ def train_conv_net(datasets,
     f_nt_after_test_layer1_input = T.concatenate(f_nt_after_test_pred_layers, 1)
     f_nt_before_test_y_pred_p = classifier.predict_p(f_nt_before_test_layer1_input)
     f_nt_after_test_y_pred_p = classifier.predict_p(f_nt_after_test_layer1_input)
-    f_nt_test_full = T.concatenate([f_nt_ind, f_nt_before_test_y_pred_p, f_nt_after_test_y_pred_p], axis=1)  # Ns x 1 + Ns x K
+    f_nt_test_full = T.concatenate([f_nt_ind, f_nt_before_test_y_pred_p, f_nt_after_test_y_pred_p],
+                                   axis=1)  # Ns x 1 + Ns x K
 
     # transform to shared variables
     test_set_x_shr, test_set_y_shr = shared_dataset((test_set_x, test_set_y))
@@ -380,7 +382,11 @@ def train_conv_net(datasets,
             'epoch: %i, training time: %.2f secs; (q): train perf: %.4f %%, val perf: %.4f %%; (p): train perf: %.4f %%, val perf: %.4f %%' % \
             (epoch, time.time() - start_time, train_q_perf * 100., val_q_perf * 100., train_p_perf * 100.,
              val_p_perf * 100.))
-        test_loss = test_model_all(test_set_x, test_set_y, test_fea['but'], test_fea_but_ind)
+        print test_fea.keys()
+        print test_set_x.shape
+        print test_set_y.shape
+        test_loss = test_model_all(test_set_x, test_set_y, test_fea['but'], test_fea_but_ind, test_fea['nt_before'],
+                                   test_fea['nt_after'], test_fea_nt_ind)
         test_loss = np.array(test_loss)
         test_perf = 1 - test_loss
         print 'test perf: q %.4f %%, p %.4f %%' % (test_perf[0] * 100., test_perf[1] * 100.)
@@ -640,7 +646,7 @@ if __name__ == "__main__":
     q_results = []
     p_results = []
     datasets = make_idx_data(revs, fea, word_idx_map, max_l=53, k="Not used!", filter_h=5)
-    train_size = 14000
+    train_size = 10
     dev_size = 100
     test_size = 200
     datasets[0] = datasets[0][:train_size]  # 76961
@@ -665,7 +671,7 @@ if __name__ == "__main__":
                           n_epochs=2,  # 20
                           sqr_norm_lim=9,
                           non_static=non_static,
-                          batch_size=50,
+                          batch_size=10,
                           dropout_rate=[0.4],
                           pi_params=[0.95, 0],
                           C=6.,
