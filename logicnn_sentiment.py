@@ -129,7 +129,7 @@ def train_conv_net(datasets,
     # add logic layer
     nclasses = 2
     rules = [FOL_But(nclasses, x, f_but_full), FOL_NT(nclasses, x, f_nt_full)]
-    rule_lambda = [1]
+    rule_lambda = [1, 1]
     new_pi = get_pi(cur_iter=0, params=pi_params)
     logic_nn = LogicNN(rng, input=x, network=classifier, rules=rules, rule_lambda=rule_lambda, pi=new_pi, C=C)
 
@@ -237,9 +237,10 @@ def train_conv_net(datasets,
                                     x: val_set_x[index * batch_size: (index + 1) * batch_size],
                                     y: val_set_y[index * batch_size: (index + 1) * batch_size],
                                     f_but: val_fea['but'][index * batch_size: (index + 1) * batch_size],
-                                    f_nt: T.concatenate(
-                                        [val_fea['nt_before'][index * batch_size: (index + 1) * batch_size],
-                                         val_fea['nt_after'][index * batch_size: (index + 1) * batch_size]], 1),
+                                    f_nt: val_fea['nt_before'][index * batch_size: (index + 1) * batch_size],
+                                    # f_nt: T.concatenate(
+                                    #     [val_fea['nt_before'][index * batch_size: (index + 1) * batch_size],
+                                    #      val_fea['nt_after'][index * batch_size: (index + 1) * batch_size]], 1),
                                     # could be 0
                                     f_but_ind: val_fea_but_ind[index * batch_size: (index + 1) * batch_size, :],
                                     f_nt_ind: val_fea_nt_ind[index * batch_size: (index + 1) * batch_size, :]},
@@ -251,9 +252,10 @@ def train_conv_net(datasets,
                                      x: train_set_x[index * batch_size: (index + 1) * batch_size],
                                      y: train_set_y[index * batch_size: (index + 1) * batch_size],
                                      f_but: train_fea['but'][index * batch_size: (index + 1) * batch_size],
-                                     f_nt: T.concatenate(
-                                         [train_fea['nt_before'][index * batch_size: (index + 1) * batch_size],
-                                          train_fea['nt_before'][index * batch_size: (index + 1) * batch_size]], 1),
+                                     f_nt: train_fea['nt_before'][index * batch_size: (index + 1) * batch_size],
+                                     # f_nt: T.concatenate(
+                                     #     [train_fea['nt_before'][index * batch_size: (index + 1) * batch_size],
+                                     #      train_fea['nt_before'][index * batch_size: (index + 1) * batch_size]], 1),
                                      f_but_ind: train_fea_but_ind[index * batch_size: (index + 1) * batch_size, :],
                                      f_nt_ind: train_fea_nt_ind[index * batch_size: (index + 1) * batch_size, :]},
                                  allow_input_downcast=True,
@@ -264,10 +266,10 @@ def train_conv_net(datasets,
                                       x: train_set_x[index * batch_size:(index + 1) * batch_size],
                                       y: train_set_y[index * batch_size:(index + 1) * batch_size],
                                       f_but: train_fea['but'][index * batch_size: (index + 1) * batch_size],
-                                      # f_nt: train_fea['nt_before'][index * batch_size: (index + 1) * batch_size],
-                                      f_nt: T.concatenate(
-                                          [train_fea['nt_before'][index * batch_size: (index + 1) * batch_size],
-                                           train_fea['nt_before'][index * batch_size: (index + 1) * batch_size]], 0),
+                                      f_nt: train_fea['nt_before'][index * batch_size: (index + 1) * batch_size],
+                                      # f_nt: T.concatenate(
+                                      #     [train_fea['nt_before'][index * batch_size: (index + 1) * batch_size],
+                                      #      train_fea['nt_before'][index * batch_size: (index + 1) * batch_size]], 0),
                                       f_but_ind: train_fea_but_ind[index * batch_size: (index + 1) * batch_size, :],
                                       f_nt_ind: train_fea_nt_ind[index * batch_size: (index + 1) * batch_size, :]},
                                   allow_input_downcast=True,
