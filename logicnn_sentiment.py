@@ -116,12 +116,12 @@ def train_conv_net(datasets,
     f_nt_before = T.fmatrix('f_nt_before')
     f_nt_after = T.fmatrix('f_nt_after')
     f_nt_ind = T.fmatrix('f_nt_ind')  # indicators
-    f_nt_before_printed = theano.printing.Print('Hallo, in theano! Dit is fn_before.shape: ')(f_nt_before)
-    f_nt_after_shape_printed = theano.printing.Print('Hallo, in theano! Dit is fn_after.shape: ')(f_nt_after.shape)
+    # f_nt_before_printed = theano.printing.Print('Hallo, in theano! Dit is fn_before.shape: ')(f_nt_before)
+    # f_nt_after_shape_printed = theano.printing.Print('Hallo, in theano! Dit is fn_after.shape: ')(f_nt_after.shape)
     f_nt_before_layer0_input = Words[T.cast(f_nt_before.flatten(), dtype="int32")].reshape(
         (f_nt_before.shape[0], 1, f_nt_before.shape[1], Words.shape[1]))
     f_nt_after_layer0_input = Words[T.cast(f_nt_after.flatten(), dtype="int32")].reshape(
-        (f_nt_after_shape_printed[0], 1, f_nt_after.shape[1], Words.shape[1]))
+        (f_nt_after.shape[0], 1, f_nt_after.shape[1], Words.shape[1]))
     f_nt_before_pred_layers = []
     f_nt_after_pred_layers = []
     for conv_layer in conv_layers:
@@ -133,11 +133,11 @@ def train_conv_net(datasets,
     f_nt_after_layer1_input = T.concatenate(f_nt_after_pred_layers, 1)
     f_nt_before_y_pred_p = classifier.predict_p(f_nt_before_layer1_input)
     f_nt_after_y_pred_p = classifier.predict_p(f_nt_after_layer1_input)
-    f_nt_before_y_pred_p_printed = theano.printing.Print('Hallo, in theano! Dit is f_nt_before_y_pred: ')(f_nt_before_y_pred_p)
-    f_nt_after_y_pred_p_printed = theano.printing.Print('Hallo, in theano! Dit is f_nt_after_y_pred: ')(f_nt_after_y_pred_p)
-    f_nt_full = T.concatenate([f_nt_ind, f_nt_before_y_pred_p_printed, f_nt_after_y_pred_p_printed], axis=1)  # batch_size x 1 + batch_size x K
-    f_nt_full_printed = theano.printing.Print('Hallo, in theano! Dit is f_nt_full: ')(f_nt_full)
-    f_nt_full = theano.gradient.disconnected_grad(f_nt_full_printed)
+    # f_nt_before_y_pred_p_printed = theano.printing.Print('Hallo, in theano! Dit is f_nt_before_y_pred: ')(f_nt_before_y_pred_p)
+    # f_nt_after_y_pred_p_printed = theano.printing.Print('Hallo, in theano! Dit is f_nt_after_y_pred: ')(f_nt_after_y_pred_p)
+    f_nt_full = T.concatenate([f_nt_ind, f_nt_before_y_pred_p, f_nt_after_y_pred_p], axis=1)  # batch_size x 1 + batch_size x K
+    # f_nt_full_printed = theano.printing.Print('Hallo, in theano! Dit is f_nt_full: ')(f_nt_full)
+    f_nt_full = theano.gradient.disconnected_grad(f_nt_full)
 
     # add logic layer
     nclasses = 2
@@ -425,7 +425,7 @@ def shared_fea(fea, borrow=True):
     """
     Function that loads the features into shared variables
     """
-    print fea[1]
+    # print fea[1]
     shared_fea = theano.shared(np.asarray(fea,
                                           dtype=theano.config.floatX),
                                borrow=borrow)
@@ -561,7 +561,7 @@ def make_idx_data(revs, fea, word_idx_map, max_l=51, k="Not used!", filter_h=5):
             dev_fea[k] = np.array(dev_fea[k])
             test_fea[k] = np.array(test_fea[k])
         else:
-            print 'key:', k
+            # print 'key:', k
             train_fea[k] = np.array(train_fea[k], dtype=theano.config.floatX)
             dev_fea[k] = np.array(dev_fea[k], dtype=theano.config.floatX)
             test_fea[k] = np.array(test_fea[k], dtype=theano.config.floatX)
