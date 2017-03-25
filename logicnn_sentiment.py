@@ -300,35 +300,33 @@ def train_conv_net(datasets,
     test_layer0_input = Words[T.cast(x.flatten(), dtype="int32")].reshape((test_size, 1, img_h, Words.shape[1]))
 
     f_but_test_pred_layers = []
-    f_but_test_layer0_input = Words[T.cast(f_but.flatten(), dtype="int32")].reshape(
-        (test_size, 1, img_h, Words.shape[1]))
-    for conv_layer in conv_layers:
-        test_layer0_output = conv_layer.predict(test_layer0_input, test_size)
-    test_pred_layers.append(test_layer0_output.flatten(2))
-    f_but_test_layer0_output = conv_layer.predict(f_but_test_layer0_input, test_size)
-    f_but_test_pred_layers.append(f_but_test_layer0_output.flatten(2))
-    test_layer1_input = T.concatenate(test_pred_layers, 1)
-    f_but_test_layer1_input = T.concatenate(f_but_test_pred_layers, 1)
-    f_but_test_y_pred_p = classifier.predict_p(f_but_test_layer1_input)
-    f_but_test_full = T.concatenate([f_but_ind, f_but_test_y_pred_p], axis=1)  # Ns x 1 + Ns x K
-
-    # NT full
     f_nt_before_test_pred_layers = []
     f_nt_after_test_pred_layers = []
+    f_but_test_layer0_input = Words[T.cast(f_but.flatten(), dtype="int32")].reshape(
+        (test_size, 1, img_h, Words.shape[1]))
     f_nt_before_test_layer0_input = Words[T.cast(f_nt_before.flatten(), dtype="int32")].reshape(
         (test_size, 1, img_h, Words.shape[1]))
     f_nt_after_test_layer0_input = Words[T.cast(f_nt_after.flatten(), dtype="int32")].reshape(
         (test_size, 1, img_h, Words.shape[1]))
-    f_nt_test_before_layer0_output = conv_layer.predict(f_nt_before_test_layer0_input, test_size)
-    f_nt_test_after_layer0_output = conv_layer.predict(f_nt_after_test_layer0_input, test_size)
-    f_nt_before_test_pred_layers.append(f_nt_test_before_layer0_output.flatten(2))
-    f_nt_after_test_pred_layers.append(f_nt_test_after_layer0_output.flatten(2))
+    for conv_layer in conv_layers:
+        test_layer0_output = conv_layer.predict(test_layer0_input, test_size)
+        test_pred_layers.append(test_layer0_output.flatten(2))
+        f_but_test_layer0_output = conv_layer.predict(f_but_test_layer0_input, test_size)
+        f_nt_test_before_layer0_output = conv_layer.predict(f_nt_before_test_layer0_input, test_size)
+        f_nt_test_after_layer0_output = conv_layer.predict(f_nt_after_test_layer0_input, test_size)
+        f_but_test_pred_layers.append(f_but_test_layer0_output.flatten(2))
+        f_nt_before_test_pred_layers.append(f_nt_test_before_layer0_output.flatten(2))
+        f_nt_after_test_pred_layers.append(f_nt_test_after_layer0_output.flatten(2))
+    test_layer1_input = T.concatenate(test_pred_layers, 1)
+    f_but_test_layer1_input = T.concatenate(f_but_test_pred_layers, 1)
     f_nt_before_test_layer1_input = T.concatenate(f_nt_before_test_pred_layers, 1)
     f_nt_after_test_layer1_input = T.concatenate(f_nt_after_test_pred_layers, 1)
+    f_but_test_y_pred_p = classifier.predict_p(f_but_test_layer1_input)
     f_nt_before_test_y_pred_p = classifier.predict_p(f_nt_before_test_layer1_input)
     f_nt_after_test_y_pred_p = classifier.predict_p(f_nt_after_test_layer1_input)
+    f_but_test_full = T.concatenate([f_but_ind, f_but_test_y_pred_p], axis=1)  # Ns x 1 + Ns x K
     f_nt_test_full = T.concatenate([f_nt_ind, f_nt_before_test_y_pred_p, f_nt_after_test_y_pred_p],
-                                   axis=1)  # Ns x 2 + Ns x K
+                                   axis=1)  #
 
     # transform to shared variables
     test_set_x_shr, test_set_y_shr = shared_dataset((test_set_x, test_set_y))
