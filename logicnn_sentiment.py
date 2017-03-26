@@ -99,18 +99,18 @@ def train_conv_net(datasets,
     number of sentiment classes). So in your case, you may need to compute the sentiment of both A and B parts, and
     concatenate to get the feature matrix (which probably has 1+2*K columns) for rule evaluation.
     """
-    f_but = T.fmatrix('f_but')
-    f_but_ind = T.fmatrix('f_ind')  # indicators
-    f_but_layer0_input = Words[T.cast(f_but.flatten(), dtype="int32")].reshape(
-        (f_but.shape[0], 1, f_but.shape[1], Words.shape[1]))
-    f_but_pred_layers = []
-    for conv_layer in conv_layers:
-        f_but_layer0_output = conv_layer.predict(f_but_layer0_input, batch_size)
-        f_but_pred_layers.append(f_but_layer0_output.flatten(2))
-    f_but_layer1_input = T.concatenate(f_but_pred_layers, 1)
-    f_but_y_pred_p = classifier.predict_p(f_but_layer1_input)
-    f_but_full = T.concatenate([f_but_ind, f_but_y_pred_p], axis=1)  # batch_size x 1 + batch_size x K
-    f_but_full = theano.gradient.disconnected_grad(f_but_full)
+    # f_but = T.fmatrix('f_but')
+    # f_but_ind = T.fmatrix('f_ind')  # indicators
+    # f_but_layer0_input = Words[T.cast(f_but.flatten(), dtype="int32")].reshape(
+    #     (f_but.shape[0], 1, f_but.shape[1], Words.shape[1]))
+    # f_but_pred_layers = []
+    # for conv_layer in conv_layers:
+    #     f_but_layer0_output = conv_layer.predict(f_but_layer0_input, batch_size)
+    #     f_but_pred_layers.append(f_but_layer0_output.flatten(2))
+    # f_but_layer1_input = T.concatenate(f_but_pred_layers, 1)
+    # f_but_y_pred_p = classifier.predict_p(f_but_layer1_input)
+    # f_but_full = T.concatenate([f_but_ind, f_but_y_pred_p], axis=1)  # batch_size x 1 + batch_size x K
+    # f_but_full = theano.gradient.disconnected_grad(f_but_full)
 
     # build the feature of NT-rule
     f_nt_before = T.fmatrix('f_nt_before')
@@ -142,8 +142,8 @@ def train_conv_net(datasets,
 
     # add logic layer
     nclasses = 2
-    rules = [FOL_But(nclasses, x, f_but_full), FOL_NT(nclasses, x, f_nt_full)]
-    rule_lambda = [1, 1]
+    rules = [FOL_NT(nclasses, x, f_nt_full)]
+    rule_lambda = [1]
     new_pi = get_pi(cur_iter=0, params=pi_params)
     logic_nn = LogicNN(rng, input=x, network=classifier, rules=rules, rule_lambda=rule_lambda, pi=new_pi, C=C)
 
@@ -193,8 +193,8 @@ def train_conv_net(datasets,
     train_set = new_data
     train_set_x, train_set_y = shared_dataset((train_set[:, :img_h], train_set[:, -1]))
     train_fea = new_fea
-    train_fea_but_ind = train_fea['but_ind'].reshape([train_fea['but_ind'].shape[0], 1])
-    train_fea_but_ind = shared_fea(train_fea_but_ind)
+    # train_fea_but_ind = train_fea['but_ind'].reshape([train_fea['but_ind'].shape[0], 1])
+    # train_fea_but_ind = shared_fea(train_fea_but_ind)
     train_fea_nt_ind = train_fea['nt_ind'].reshape([train_fea['nt_ind'].shape[0], 1])
     train_fea_nt_ind = shared_fea(train_fea_nt_ind)
     for k in new_fea.keys():
@@ -227,8 +227,8 @@ def train_conv_net(datasets,
     n_batches = new_val_data.shape[0] / batch_size
     n_val_batches = n_batches
     val_fea = new_val_fea
-    val_fea_but_ind = val_fea['but_ind'].reshape([val_fea['but_ind'].shape[0], 1])
-    val_fea_but_ind = shared_fea(val_fea_but_ind)
+    # val_fea_but_ind = val_fea['but_ind'].reshape([val_fea['but_ind'].shape[0], 1])
+    # val_fea_but_ind = shared_fea(val_fea_but_ind)
     val_fea_nt_ind = val_fea['nt_ind'].reshape([val_fea['nt_ind'].shape[0], 1])
     val_fea_nt_ind = shared_fea(val_fea_nt_ind)
     for k in val_fea.keys():
@@ -239,8 +239,8 @@ def train_conv_net(datasets,
     test_set_x = datasets[2][:, :img_h]
     test_set_y = np.asarray(datasets[2][:, -1], "int32")
     test_fea = datasets[5]
-    test_fea_but_ind = test_fea['but_ind']
-    test_fea_but_ind = test_fea_but_ind.reshape([test_fea_but_ind.shape[0], 1])
+    # test_fea_but_ind = test_fea['but_ind']
+    # test_fea_but_ind = test_fea_but_ind.reshape([test_fea_but_ind.shape[0], 1])
     test_fea_nt_ind = test_fea['nt_ind']
     test_fea_nt_ind = test_fea_nt_ind.reshape([test_fea_nt_ind.shape[0], 1])
     test_text = datasets[8]
@@ -250,14 +250,14 @@ def train_conv_net(datasets,
                                 givens={
                                     x: val_set_x[index * batch_size: (index + 1) * batch_size],
                                     y: val_set_y[index * batch_size: (index + 1) * batch_size],
-                                    f_but: val_fea['but'][index * batch_size: (index + 1) * batch_size],
+                                    # f_but: val_fea['but'][index * batch_size: (index + 1) * batch_size],
                                     f_nt_before: val_fea['nt_before'][index * batch_size: (index + 1) * batch_size],
                                     f_nt_after: val_fea['nt_after'][index * batch_size: (index + 1) * batch_size],
                                     # f_nt: T.concatenate(
                                     #     [val_fea['nt_before'][index * batch_size: (index + 1) * batch_size],
                                     #      val_fea['nt_after'][index * batch_size: (index + 1) * batch_size]], 1),
                                     # could be 0
-                                    f_but_ind: val_fea_but_ind[index * batch_size: (index + 1) * batch_size, :],
+                                    # f_but_ind: val_fea_but_ind[index * batch_size: (index + 1) * batch_size, :],
                                     f_nt_ind: val_fea_nt_ind[index * batch_size: (index + 1) * batch_size, :]},
                                 allow_input_downcast=True,
                                 on_unused_input='warn')
@@ -266,13 +266,13 @@ def train_conv_net(datasets,
                                  givens={
                                      x: train_set_x[index * batch_size: (index + 1) * batch_size],
                                      y: train_set_y[index * batch_size: (index + 1) * batch_size],
-                                     f_but: train_fea['but'][index * batch_size: (index + 1) * batch_size],
+                                     # f_but: train_fea['but'][index * batch_size: (index + 1) * batch_size],
                                      f_nt_before: train_fea['nt_before'][index * batch_size: (index + 1) * batch_size],
                                      f_nt_after: train_fea['nt_after'][index * batch_size: (index + 1) * batch_size],
                                      # f_nt: T.concatenate(
                                      #     [train_fea['nt_before'][index * batch_size: (index + 1) * batch_size],
                                      #      train_fea['nt_before'][index * batch_size: (index + 1) * batch_size]], 1),
-                                     f_but_ind: train_fea_but_ind[index * batch_size: (index + 1) * batch_size, :],
+                                     # f_but_ind: train_fea_but_ind[index * batch_size: (index + 1) * batch_size, :],
                                      f_nt_ind: train_fea_nt_ind[index * batch_size: (index + 1) * batch_size, :]},
                                  allow_input_downcast=True,
                                  on_unused_input='warn')
@@ -281,14 +281,14 @@ def train_conv_net(datasets,
                                   givens={
                                       x: train_set_x[index * batch_size:(index + 1) * batch_size],
                                       y: train_set_y[index * batch_size:(index + 1) * batch_size],
-                                      f_but: train_fea['but'][index * batch_size: (index + 1) * batch_size],
+                                      # f_but: train_fea['but'][index * batch_size: (index + 1) * batch_size],
                                       f_nt_before: train_fea['nt_before'][index * batch_size: (index + 1) * batch_size],
                                       f_nt_after: train_fea['nt_after'][index * batch_size: (index + 1) * batch_size],
                                       # f_nt_before: train_fea['nt_before'][index * batch_size: (index + 1) * batch_size],
                                       # f_nt: T.concatenate(
                                       #     [train_fea['nt_before'][index * batch_size: (index + 1) * batch_size],
                                       #      train_fea['nt_before'][index * batch_size: (index + 1) * batch_size]], 0),
-                                      f_but_ind: train_fea_but_ind[index * batch_size: (index + 1) * batch_size, :],
+                                      # f_but_ind: train_fea_but_ind[index * batch_size: (index + 1) * batch_size, :],
                                       f_nt_ind: train_fea_nt_ind[index * batch_size: (index + 1) * batch_size, :]},
                                   allow_input_downcast=True,
                                   on_unused_input='warn')
@@ -299,11 +299,11 @@ def train_conv_net(datasets,
     test_pred_layers = []
     test_layer0_input = Words[T.cast(x.flatten(), dtype="int32")].reshape((test_size, 1, img_h, Words.shape[1]))
 
-    f_but_test_pred_layers = []
+    # f_but_test_pred_layers = []
     f_nt_before_test_pred_layers = []
     f_nt_after_test_pred_layers = []
-    f_but_test_layer0_input = Words[T.cast(f_but.flatten(), dtype="int32")].reshape(
-        (test_size, 1, img_h, Words.shape[1]))
+    # f_but_test_layer0_input = Words[T.cast(f_but.flatten(), dtype="int32")].reshape(
+    #     (test_size, 1, img_h, Words.shape[1]))
     f_nt_before_test_layer0_input = Words[T.cast(f_nt_before.flatten(), dtype="int32")].reshape(
         (test_size, 1, img_h, Words.shape[1]))
     f_nt_after_test_layer0_input = Words[T.cast(f_nt_after.flatten(), dtype="int32")].reshape(
@@ -311,20 +311,20 @@ def train_conv_net(datasets,
     for conv_layer in conv_layers:
         test_layer0_output = conv_layer.predict(test_layer0_input, test_size)
         test_pred_layers.append(test_layer0_output.flatten(2))
-        f_but_test_layer0_output = conv_layer.predict(f_but_test_layer0_input, test_size)
+        # f_but_test_layer0_output = conv_layer.predict(f_but_test_layer0_input, test_size)
         f_nt_test_before_layer0_output = conv_layer.predict(f_nt_before_test_layer0_input, test_size)
         f_nt_test_after_layer0_output = conv_layer.predict(f_nt_after_test_layer0_input, test_size)
-        f_but_test_pred_layers.append(f_but_test_layer0_output.flatten(2))
+        # f_but_test_pred_layers.append(f_but_test_layer0_output.flatten(2))
         f_nt_before_test_pred_layers.append(f_nt_test_before_layer0_output.flatten(2))
         f_nt_after_test_pred_layers.append(f_nt_test_after_layer0_output.flatten(2))
     test_layer1_input = T.concatenate(test_pred_layers, 1)
-    f_but_test_layer1_input = T.concatenate(f_but_test_pred_layers, 1)
+    # f_but_test_layer1_input = T.concatenate(f_but_test_pred_layers, 1)
     f_nt_before_test_layer1_input = T.concatenate(f_nt_before_test_pred_layers, 1)
     f_nt_after_test_layer1_input = T.concatenate(f_nt_after_test_pred_layers, 1)
-    f_but_test_y_pred_p = classifier.predict_p(f_but_test_layer1_input)
+    # f_but_test_y_pred_p = classifier.predict_p(f_but_test_layer1_input)
     f_nt_before_test_y_pred_p = classifier.predict_p(f_nt_before_test_layer1_input)
     f_nt_after_test_y_pred_p = classifier.predict_p(f_nt_after_test_layer1_input)
-    f_but_test_full = T.concatenate([f_but_ind, f_but_test_y_pred_p], axis=1)  # Ns x 1 + Ns x K
+    # f_but_test_full = T.concatenate([f_but_ind, f_but_test_y_pred_p], axis=1)  # Ns x 1 + Ns x K
     f_nt_test_full = T.concatenate([f_nt_ind, f_nt_before_test_y_pred_p, f_nt_after_test_y_pred_p],
                                    axis=1)  #
 
@@ -333,10 +333,10 @@ def train_conv_net(datasets,
 
     test_q_y_pred, test_p_y_pred = logic_nn.predict(test_layer1_input,
                                                     test_set_x_shr,
-                                                    [f_but_test_full, f_nt_test_full])
+                                                    [f_nt_test_full])
     test_q_error = T.mean(T.neq(test_q_y_pred, y))
     test_p_error = T.mean(T.neq(test_p_y_pred, y))
-    test_model_all = theano.function([x, y, f_but, f_but_ind, f_nt_before, f_nt_after, f_nt_ind],
+    test_model_all = theano.function([x, y, f_nt_before, f_nt_after, f_nt_ind],
                                      [test_q_error, test_p_error], allow_input_downcast=True,
                                      on_unused_input='warn')
 
@@ -381,7 +381,7 @@ def train_conv_net(datasets,
             (epoch, time.time() - start_time, train_q_perf * 100., val_q_perf * 100., train_p_perf * 100.,
              val_p_perf * 100.))
         print test_fea.keys()
-        test_loss = test_model_all(test_set_x, test_set_y, test_fea['but'], test_fea_but_ind, test_fea['nt_before'],
+        test_loss = test_model_all(test_set_x, test_set_y, test_fea['nt_before'],
                                    test_fea['nt_after'], test_fea_nt_ind)
         test_loss = np.array(test_loss)
         test_perf = 1 - test_loss
@@ -515,7 +515,7 @@ def make_idx_data(revs, fea, word_idx_map, max_l=51, k="Not used!", filter_h=5):
     train, dev, test = [], [], []
     train_text, dev_text, test_text = [], [], []
     train_fea, dev_fea, test_fea = {}, {}, {}
-    fea['but'] = []
+    # fea['but'] = []
     fea['nt_before'] = []
     fea['nt_after'] = []
     for k in fea.keys():
@@ -528,7 +528,7 @@ def make_idx_data(revs, fea, word_idx_map, max_l=51, k="Not used!", filter_h=5):
         # print sent
         # exit()
 
-        fea['but'].append(get_idx_from_but_fea(fea['but_text'][i], fea['but_ind'][i], word_idx_map, max_l, k, filter_h))
+        # fea['but'].append(get_idx_from_but_fea(fea['but_text'][i], fea['but_ind'][i], word_idx_map, max_l, k, filter_h))
         fea['nt_before'].append(
             get_idx_from_but_fea(fea['nt_before_text'][i], fea['nt_ind'][i], word_idx_map, max_l, k, filter_h))
         fea['nt_after'].append(
@@ -642,7 +642,7 @@ if __name__ == "__main__":
     q_results = []
     p_results = []
     datasets = make_idx_data(revs, fea, word_idx_map, max_l=53, k="Not used!", filter_h=5)
-    train_size = 10
+    train_size = 7000
     dev_size = 100
     test_size = 200
     datasets[0] = datasets[0][:train_size]  # 76961
@@ -664,12 +664,12 @@ if __name__ == "__main__":
                           conv_non_linear="relu",
                           hidden_units=[100, 2],  # hidden_units=[100,2]
                           shuffle_batch=True,
-                          n_epochs=2,  # 20
+                          n_epochs=20,  # 20
                           sqr_norm_lim=9,
                           non_static=non_static,
                           batch_size=10,
                           dropout_rate=[0.4],
-                          pi_params=[0.95, 0],
+                          pi_params=[0.33, 0],
                           C=6.,
                           patience=5)  # 20
     q_results.append(perf[0])
