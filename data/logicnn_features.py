@@ -25,17 +25,17 @@ def extract_but(revs):
     but_ind = []
     but_fea_cnt = 0
     for rev in revs:
-        text = rev["text"]
-        if ' but ' in text:
-            but_ind.append(1)
-            # make the text after 'but' as the feature
-            fea = text.split('but')[1:]
-            fea = ''.join(fea)
-            fea = fea.strip().replace('  ', ' ')
-            but_fea_cnt += 1
-        else:
-            but_ind.append(0)
-            fea = ''
+        # text = rev["text"]
+        # if ' but ' in text:
+        #     but_ind.append(1)
+        #     # make the text after 'but' as the feature
+        #     fea = text.split('but')[1:]
+        #     fea = ''.join(fea)
+        #     fea = fea.strip().replace('  ', ' ')
+        #     but_fea_cnt += 1
+        # else:
+        but_ind.append(0)
+        fea = ''
         but_fea.append(fea)
     print '#but %d' % but_fea_cnt
     return {'but_text': but_fea, 'but_ind': but_ind}
