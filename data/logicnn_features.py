@@ -32,6 +32,9 @@ def extract_features(revs):
     nt_fea_cnt = 0
     for rev in revs:
         text = rev["text"]
+        nt_ind.append(0)
+        fea_after = ''
+        fea_before = ''
         if ' but ' in text:
             but_ind.append(1)
             # make the text after 'but' as the feature
@@ -53,10 +56,6 @@ def extract_features(revs):
                 fea_after = fea_after.strip().replace('  ', ' ')
                 fea_before = fea_before.strip().replace('  ', ' ')
                 nt_fea_cnt += 1
-            else:
-                nt_ind.append(0)
-                fea_after = ''
-                fea_before = ''
         but_fea.append(fea)
         nt_fea_after.append(fea_after)
         nt_fea_before.append(fea_before)

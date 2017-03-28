@@ -644,7 +644,7 @@ if __name__ == "__main__":
     p_results = []
     datasets = make_idx_data(revs, fea, word_idx_map, max_l=53, k="Not used!", filter_h=5)
     train_size = 76000
-    print train_size, 76000
+    print 'train_size:', train_size
     datasets[0] = datasets[0][:train_size]  # 76961
     datasets[6] = datasets[6][:train_size]
     # indices = [3633, 5528, 3001, 5453, 4580, 3467, 1375, 3759, 5553, 3414, 1366, 1461, 3776, 3044, 1676, 6092, 3822, 40,
