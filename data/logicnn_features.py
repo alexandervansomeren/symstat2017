@@ -42,21 +42,22 @@ def extract_features(revs):
         else:
             but_ind.append(0)
             fea = ''
+            # only if not but already
+            if " n't " in text:
+                nt_ind.append(1)
+                # make the text after 'but' as the feature
+                fea_after = text.split("n't")[1:]
+                fea_before = text.split("n't")[:1]
+                fea_after = ''.join(fea_after)
+                fea_before = ''.join(fea_before)
+                fea_after = fea_after.strip().replace('  ', ' ')
+                fea_before = fea_before.strip().replace('  ', ' ')
+                nt_fea_cnt += 1
+            else:
+                nt_ind.append(0)
+                fea_after = ''
+                fea_before = ''
         but_fea.append(fea)
-        if " n't " in text:
-            nt_ind.append(1)
-            # make the text after 'but' as the feature
-            fea_after = text.split("n't")[1:]
-            fea_before = text.split("n't")[:1]
-            fea_after = ''.join(fea_after)
-            fea_before = ''.join(fea_before)
-            fea_after = fea_after.strip().replace('  ', ' ')
-            fea_before = fea_before.strip().replace('  ', ' ')
-            nt_fea_cnt += 1
-        else:
-            nt_ind.append(0)
-            fea_after = ''
-            fea_before = ''
         nt_fea_after.append(fea_after)
         nt_fea_before.append(fea_before)
 
