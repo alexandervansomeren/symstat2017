@@ -113,36 +113,24 @@ def train_conv_net(datasets,
     f_but_full = theano.gradient.disconnected_grad(f_but_full)
 
     # build the feature of NT-rule
-    f_nt_before = T.fmatrix('f_nt_before')
-    f_nt_after = T.fmatrix('f_nt_after')
-    f_nt_ind = T.fmatrix('f_nt_ind')  # indicators
-    # f_nt_before_printed = theano.printing.Print('Hallo, in theano! Dit is fn_before.shape: ')(f_nt_before)
-    # f_nt_after_shape_printed = theano.printing.Print('Hallo, in theano! Dit is fn_after.shape: ')(f_nt_after.shape)
-    f_nt_before_layer0_input = Words[T.cast(f_nt_before.flatten(), dtype="int32")].reshape(
-        (f_nt_before.shape[0], 1, f_nt_before.shape[1], Words.shape[1]))
-    f_nt_after_layer0_input = Words[T.cast(f_nt_after.flatten(), dtype="int32")].reshape(
-        (f_nt_after.shape[0], 1, f_nt_after.shape[1], Words.shape[1]))
-    f_nt_before_pred_layers = []
-    f_nt_after_pred_layers = []
+    f_implicit_negation = T.fmatrix('f_implicit_negation')
+    f_implicit_negation_ind = T.fmatrix('f_implicit_negation_ind')  # indicators
+    f_implicit_negation_layer0_input = Words[T.cast(f_implicit_negation.flatten(), dtype="int32")].reshape(
+        (f_implicit_negation.shape[0], 1, f_implicit_negation.shape[1], Words.shape[1]))
+    f_implicit_negation_pred_layers = []
     for conv_layer in conv_layers:
-        f_nt_before_layer0_output = conv_layer.predict(f_nt_before_layer0_input, batch_size)
-        f_nt_after_layer0_output = conv_layer.predict(f_nt_after_layer0_input, batch_size)
-        f_nt_before_pred_layers.append(f_nt_before_layer0_output.flatten(2))
-        f_nt_after_pred_layers.append(f_nt_after_layer0_output.flatten(2))
-    f_nt_before_layer1_input = T.concatenate(f_nt_before_pred_layers, 1)
-    f_nt_after_layer1_input = T.concatenate(f_nt_after_pred_layers, 1)
-    f_nt_before_y_pred_p = classifier.predict_p(f_nt_before_layer1_input)
-    f_nt_after_y_pred_p = classifier.predict_p(f_nt_after_layer1_input)
-    # f_nt_before_y_pred_p_printed = theano.printing.Print('Hallo, in theano! Dit is f_nt_before_y_pred: ')(f_nt_before_y_pred_p)
-    # f_nt_after_y_pred_p_printed = theano.printing.Print('Hallo, in theano! Dit is f_nt_after_y_pred: ')(f_nt_after_y_pred_p)
-    f_nt_full = T.concatenate([f_nt_ind, f_nt_before_y_pred_p, f_nt_after_y_pred_p],
+        f_implicit_negation_layer0_output = conv_layer.predict(f_implicit_negation_layer0_input, batch_size)
+        f_implicit_negation_pred_layers.append(f_implicit_negation_layer0_output.flatten(2))
+    f_implicit_negation_layer1_input = T.concatenate(f_implicit_negation_pred_layers, 1)
+    f_implicit_negation_y_pred_p = classifier.predict_p(f_implicit_negation_layer1_input)
+    f_implicit_negation_full = T.concatenate([f_implicit_negation_ind, f_implicit_negation_y_pred_p],
                               axis=1)  # batch_size x 1 + batch_size x K
-    # f_nt_full_printed = theano.printing.Print('Hallo, in theano! Dit is f_nt_full: ')(f_nt_full)
-    f_nt_full = theano.gradient.disconnected_grad(f_nt_full)
+    # f_implicit_negation_full_printed = theano.printing.Print('Hallo, in theano! Dit is f_implicit_negation_full: ')(f_implicit_negation_full)
+    f_implicit_negation_full = theano.gradient.disconnected_grad(f_implicit_negation_full)
 
     # add logic layer
     nclasses = 2
-    rules = [FOL_But(nclasses, x, f_but_full), FOL_NT(nclasses, x, f_nt_full)]
+    rules = [FOL_But(nclasses, x, f_but_full), FOL_Implicit_Negation(nclasses, x, f_implicit_negation_full)]
     rule_lambda = [1, .8]
     print 'rule_lambda', rule_lambda
     new_pi = get_pi(cur_iter=0, params=pi_params)
@@ -196,10 +184,10 @@ def train_conv_net(datasets,
     train_fea = new_fea
     train_fea_but_ind = train_fea['but_ind'].reshape([train_fea['but_ind'].shape[0], 1])
     train_fea_but_ind = shared_fea(train_fea_but_ind)
-    train_fea_nt_ind = train_fea['nt_ind'].reshape([train_fea['nt_ind'].shape[0], 1])
-    train_fea_nt_ind = shared_fea(train_fea_nt_ind)
+    train_fea_implicit_negation_ind = train_fea['implicit_negation_ind'].reshape([train_fea['implicit_negation_ind'].shape[0], 1])
+    train_fea_implicit_negation_ind = shared_fea(train_fea_implicit_negation_ind)
     for k in new_fea.keys():
-        if not k in ['but_text', 'nt_before_text', 'nt_after_text']:
+        if not k in ['but_text', 'implicit_negation_text']:
             train_fea[k] = shared_fea(new_fea[k])
 
     # val data
@@ -230,10 +218,10 @@ def train_conv_net(datasets,
     val_fea = new_val_fea
     val_fea_but_ind = val_fea['but_ind'].reshape([val_fea['but_ind'].shape[0], 1])
     val_fea_but_ind = shared_fea(val_fea_but_ind)
-    val_fea_nt_ind = val_fea['nt_ind'].reshape([val_fea['nt_ind'].shape[0], 1])
-    val_fea_nt_ind = shared_fea(val_fea_nt_ind)
+    val_fea_implicit_negation_ind = val_fea['implicit_negation_ind'].reshape([val_fea['implicit_negation_ind'].shape[0], 1])
+    val_fea_implicit_negation_ind = shared_fea(val_fea_implicit_negation_ind)
     for k in val_fea.keys():
-        if k not in ['but_text', 'nt_before_text', 'nt_after_text']:
+        if k not in ['but_text', 'implicit_negation_text']:
             val_fea[k] = shared_fea(val_fea[k])
 
     # test data
@@ -242,8 +230,8 @@ def train_conv_net(datasets,
     test_fea = datasets[5]
     test_fea_but_ind = test_fea['but_ind']
     test_fea_but_ind = test_fea_but_ind.reshape([test_fea_but_ind.shape[0], 1])
-    test_fea_nt_ind = test_fea['nt_ind']
-    test_fea_nt_ind = test_fea_nt_ind.reshape([test_fea_nt_ind.shape[0], 1])
+    test_fea_implicit_negation_ind = test_fea['implicit_negation_ind']
+    test_fea_implicit_negation_ind = test_fea_implicit_negation_ind.reshape([test_fea_implicit_negation_ind.shape[0], 1])
     test_text = datasets[8]
 
     ### compile theano functions to get train/val/test errors
@@ -252,14 +240,9 @@ def train_conv_net(datasets,
                                     x: val_set_x[index * batch_size: (index + 1) * batch_size],
                                     y: val_set_y[index * batch_size: (index + 1) * batch_size],
                                     f_but: val_fea['but'][index * batch_size: (index + 1) * batch_size],
-                                    f_nt_before: val_fea['nt_before'][index * batch_size: (index + 1) * batch_size],
-                                    f_nt_after: val_fea['nt_after'][index * batch_size: (index + 1) * batch_size],
-                                    # f_nt: T.concatenate(
-                                    #     [val_fea['nt_before'][index * batch_size: (index + 1) * batch_size],
-                                    #      val_fea['nt_after'][index * batch_size: (index + 1) * batch_size]], 1),
-                                    # could be 0
+                                    f_implicit_negation: val_fea['implicit_negation'][index * batch_size: (index + 1) * batch_size],
                                     f_but_ind: val_fea_but_ind[index * batch_size: (index + 1) * batch_size, :],
-                                    f_nt_ind: val_fea_nt_ind[index * batch_size: (index + 1) * batch_size, :]},
+                                    f_implicit_negation_ind: val_fea_implicit_negation_ind[index * batch_size: (index + 1) * batch_size, :]},
                                 allow_input_downcast=True,
                                 on_unused_input='warn')
 
@@ -268,13 +251,9 @@ def train_conv_net(datasets,
                                      x: train_set_x[index * batch_size: (index + 1) * batch_size],
                                      y: train_set_y[index * batch_size: (index + 1) * batch_size],
                                      f_but: train_fea['but'][index * batch_size: (index + 1) * batch_size],
-                                     f_nt_before: train_fea['nt_before'][index * batch_size: (index + 1) * batch_size],
-                                     f_nt_after: train_fea['nt_after'][index * batch_size: (index + 1) * batch_size],
-                                     # f_nt: T.concatenate(
-                                     #     [train_fea['nt_before'][index * batch_size: (index + 1) * batch_size],
-                                     #      train_fea['nt_before'][index * batch_size: (index + 1) * batch_size]], 1),
+                                     f_implicit_negation: train_fea['implicit_negation'][index * batch_size: (index + 1) * batch_size],
                                      f_but_ind: train_fea_but_ind[index * batch_size: (index + 1) * batch_size, :],
-                                     f_nt_ind: train_fea_nt_ind[index * batch_size: (index + 1) * batch_size, :]},
+                                     f_implicit_negation_ind: train_fea_implicit_negation_ind[index * batch_size: (index + 1) * batch_size, :]},
                                  allow_input_downcast=True,
                                  on_unused_input='warn')
 
@@ -283,14 +262,9 @@ def train_conv_net(datasets,
                                       x: train_set_x[index * batch_size:(index + 1) * batch_size],
                                       y: train_set_y[index * batch_size:(index + 1) * batch_size],
                                       f_but: train_fea['but'][index * batch_size: (index + 1) * batch_size],
-                                      f_nt_before: train_fea['nt_before'][index * batch_size: (index + 1) * batch_size],
-                                      f_nt_after: train_fea['nt_after'][index * batch_size: (index + 1) * batch_size],
-                                      # f_nt_before: train_fea['nt_before'][index * batch_size: (index + 1) * batch_size],
-                                      # f_nt: T.concatenate(
-                                      #     [train_fea['nt_before'][index * batch_size: (index + 1) * batch_size],
-                                      #      train_fea['nt_before'][index * batch_size: (index + 1) * batch_size]], 0),
+                                      f_implicit_negation: train_fea['implicit_negation'][index * batch_size: (index + 1) * batch_size],
                                       f_but_ind: train_fea_but_ind[index * batch_size: (index + 1) * batch_size, :],
-                                      f_nt_ind: train_fea_nt_ind[index * batch_size: (index + 1) * batch_size, :]},
+                                      f_implicit_negation_ind: train_fea_implicit_negation_ind[index * batch_size: (index + 1) * batch_size, :]},
                                   allow_input_downcast=True,
                                   on_unused_input='warn')
 
@@ -301,32 +275,25 @@ def train_conv_net(datasets,
     test_layer0_input = Words[T.cast(x.flatten(), dtype="int32")].reshape((test_size, 1, img_h, Words.shape[1]))
 
     f_but_test_pred_layers = []
-    f_nt_before_test_pred_layers = []
-    f_nt_after_test_pred_layers = []
+    f_implicit_negation_test_pred_layers = []
     f_but_test_layer0_input = Words[T.cast(f_but.flatten(), dtype="int32")].reshape(
         (test_size, 1, img_h, Words.shape[1]))
-    f_nt_before_test_layer0_input = Words[T.cast(f_nt_before.flatten(), dtype="int32")].reshape(
-        (test_size, 1, img_h, Words.shape[1]))
-    f_nt_after_test_layer0_input = Words[T.cast(f_nt_after.flatten(), dtype="int32")].reshape(
+    f_implicit_negation_test_layer0_input = Words[T.cast(f_implicit_negation.flatten(), dtype="int32")].reshape(
         (test_size, 1, img_h, Words.shape[1]))
     for conv_layer in conv_layers:
         test_layer0_output = conv_layer.predict(test_layer0_input, test_size)
         test_pred_layers.append(test_layer0_output.flatten(2))
         f_but_test_layer0_output = conv_layer.predict(f_but_test_layer0_input, test_size)
-        f_nt_test_before_layer0_output = conv_layer.predict(f_nt_before_test_layer0_input, test_size)
-        f_nt_test_after_layer0_output = conv_layer.predict(f_nt_after_test_layer0_input, test_size)
+        f_implicit_negation_test_layer0_output = conv_layer.predict(f_implicit_negation_test_layer0_input, test_size)
         f_but_test_pred_layers.append(f_but_test_layer0_output.flatten(2))
-        f_nt_before_test_pred_layers.append(f_nt_test_before_layer0_output.flatten(2))
-        f_nt_after_test_pred_layers.append(f_nt_test_after_layer0_output.flatten(2))
+        f_implicit_negation_test_pred_layers.append(f_implicit_negation_test_layer0_output.flatten(2))
     test_layer1_input = T.concatenate(test_pred_layers, 1)
     f_but_test_layer1_input = T.concatenate(f_but_test_pred_layers, 1)
-    f_nt_before_test_layer1_input = T.concatenate(f_nt_before_test_pred_layers, 1)
-    f_nt_after_test_layer1_input = T.concatenate(f_nt_after_test_pred_layers, 1)
+    f_implicit_negation_test_layer1_input = T.concatenate(f_implicit_negation_test_pred_layers, 1)
     f_but_test_y_pred_p = classifier.predict_p(f_but_test_layer1_input)
-    f_nt_before_test_y_pred_p = classifier.predict_p(f_nt_before_test_layer1_input)
-    f_nt_after_test_y_pred_p = classifier.predict_p(f_nt_after_test_layer1_input)
+    f_implicit_negation_test_y_pred_p = classifier.predict_p(f_implicit_negation_test_layer1_input)
     f_but_test_full = T.concatenate([f_but_ind, f_but_test_y_pred_p], axis=1)  # Ns x 1 + Ns x K
-    f_nt_test_full = T.concatenate([f_nt_ind, f_nt_before_test_y_pred_p, f_nt_after_test_y_pred_p],
+    f_implicit_negation_test_full = T.concatenate([f_implicit_negation_ind, f_implicit_negation_test_y_pred_p],
                                    axis=1)  #
 
     # transform to shared variables
@@ -334,10 +301,10 @@ def train_conv_net(datasets,
 
     test_q_y_pred, test_p_y_pred = logic_nn.predict(test_layer1_input,
                                                     test_set_x_shr,
-                                                    [f_but_test_full, f_nt_test_full])
+                                                    [f_but_test_full, f_implicit_negation_test_full])
     test_q_error = T.mean(T.neq(test_q_y_pred, y))
     test_p_error = T.mean(T.neq(test_p_y_pred, y))
-    test_model_all = theano.function([x, y, f_but, f_but_ind, f_nt_before, f_nt_after, f_nt_ind],
+    test_model_all = theano.function([x, y, f_but, f_but_ind, f_implicit_negation, f_implicit_negation_ind],
                                      [test_q_error, test_p_error], allow_input_downcast=True,
                                      on_unused_input='warn')
 
@@ -382,8 +349,7 @@ def train_conv_net(datasets,
             (epoch, time.time() - start_time, train_q_perf * 100., val_q_perf * 100., train_p_perf * 100.,
              val_p_perf * 100.))
         print test_fea.keys()
-        test_loss = test_model_all(test_set_x, test_set_y, test_fea['but'], test_fea_but_ind, test_fea['nt_before'],
-                                   test_fea['nt_after'], test_fea_nt_ind)
+        test_loss = test_model_all(test_set_x, test_set_y, test_fea['but'], test_fea_but_ind, test_fea['implicit_negation'], test_fea_implicit_negation_ind)
         test_loss = np.array(test_loss)
         test_perf = 1 - test_loss
         print 'test perf: q %.4f %%, p %.4f %%' % (test_perf[0] * 100., test_perf[1] * 100.)
@@ -517,8 +483,7 @@ def make_idx_data(revs, fea, word_idx_map, max_l=51, k="Not used!", filter_h=5):
     train_text, dev_text, test_text = [], [], []
     train_fea, dev_fea, test_fea = {}, {}, {}
     fea['but'] = []
-    fea['nt_before'] = []
-    fea['nt_after'] = []
+    fea['implicit_negation'] = []
     for k in fea.keys():
         train_fea[k], dev_fea[k], test_fea[k] = [], [], []
     for i, rev in enumerate(revs):
@@ -530,10 +495,8 @@ def make_idx_data(revs, fea, word_idx_map, max_l=51, k="Not used!", filter_h=5):
         # exit()
 
         fea['but'].append(get_idx_from_but_fea(fea['but_text'][i], fea['but_ind'][i], word_idx_map, max_l, k, filter_h))
-        fea['nt_before'].append(
-            get_idx_from_but_fea(fea['nt_before_text'][i], fea['nt_ind'][i], word_idx_map, max_l, k, filter_h))
-        fea['nt_after'].append(
-            get_idx_from_but_fea(fea['nt_after_text'][i], fea['nt_ind'][i], word_idx_map, max_l, k, filter_h))
+        fea['implicit_negation'].append(
+            get_idx_from_but_fea(fea['implicit_negation_text'][i], fea['implicit_negation_ind'][i], word_idx_map, max_l, k, filter_h))
 
         # Assign to train, dev and testset
         if rev["split"] == 0:
@@ -555,11 +518,11 @@ def make_idx_data(revs, fea, word_idx_map, max_l=51, k="Not used!", filter_h=5):
     dev = np.array(dev, dtype="int")
     test = np.array(test, dtype="int")
     for k in fea.keys():
-        if k == 'but' or k == 'nt_before' or k == 'nt_after':
+        if k == 'but' or k == 'implicit_negation':
             train_fea[k] = np.array(train_fea[k], dtype='int')
             dev_fea[k] = np.array(dev_fea[k], dtype='int')
             test_fea[k] = np.array(test_fea[k], dtype='int')
-        elif k == 'but_text' or k == 'nt_before_text' or k == 'nt_after_text':
+        elif k == 'but_text' or k == 'implicit_negation_text':
             train_fea[k] = np.array(train_fea[k])
             dev_fea[k] = np.array(dev_fea[k])
             test_fea[k] = np.array(test_fea[k])
@@ -643,7 +606,7 @@ if __name__ == "__main__":
     q_results = []
     p_results = []
     datasets = make_idx_data(revs, fea, word_idx_map, max_l=53, k="Not used!", filter_h=5)
-    train_size = 76000
+    train_size = 760
     print 'train_size:', train_size
     datasets[0] = datasets[0][:train_size]  # 76961
     datasets[6] = datasets[6][:train_size]

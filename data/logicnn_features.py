@@ -26,7 +26,6 @@ def extract_features(revs):
     but_fea = []
     but_ind = []
     but_fea_cnt = 0
-    implicit_negation_fea_before = []
     implicit_negation_fea = []
     implicit_negation_ind = []
     implicit_negation_fea_cnt = 0
@@ -34,7 +33,6 @@ def extract_features(revs):
         text = rev["text"]
         implicit_negation_ind.append(0)
         fea = ''
-        fea_before = ''
         if ' but ' in text:
             but_ind.append(1)
             # make the text after 'but' as the feature
@@ -74,14 +72,12 @@ def extract_features(revs):
                 implicit_negation_fea_cnt += 1
         but_fea.append(fea)
         implicit_negation_fea.append(fea)
-        implicit_negation_fea_before.append(fea_before)
 
     print '#but %d' % but_fea_cnt
     print '#implicit negation: %d' % implicit_negation_fea_cnt
     return {
         'but_text': but_fea,
         'but_ind': but_ind,
-        'implicit_negation_before_text': implicit_negation_fea_before,
         'implicit_negation_text': implicit_negation_fea,
         'implicit_negation_ind': implicit_negation_ind,
     }
