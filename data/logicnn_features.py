@@ -33,6 +33,20 @@ def extract_but(revs):
             fea = ''.join(fea)
             fea = fea.strip().replace('  ', ' ')
             but_fea_cnt += 1
+        elif ' however ' in text:
+            but_ind.append(1)
+            # make the text after 'but' as the feature
+            fea = text.split('but')[1:]
+            fea = ''.join(fea)
+            fea = fea.strip().replace('  ', ' ')
+            but_fea_cnt += 1
+        elif ' unfortunately ' in text:
+            but_ind.append(1)
+            # make the text after 'but' as the feature
+            fea = text.split('but')[1:]
+            fea = ''.join(fea)
+            fea = fea.strip().replace('  ', ' ')
+            but_fea_cnt += 1
         else:
             but_ind.append(0)
             fea = ''
