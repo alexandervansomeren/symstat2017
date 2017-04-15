@@ -547,7 +547,7 @@ if __name__ == "__main__":
     q_results = []
     p_results = []
     datasets = make_idx_data(revs, fea, word_idx_map, max_l=53, k="Not used!", filter_h=5)
-    train_size = 14000
+    train_size = 76000
     dev_size = 100
     test_size = 200
     datasets[0] = datasets[0][:train_size]  # 76961
@@ -569,14 +569,14 @@ if __name__ == "__main__":
                           conv_non_linear="relu",
                           hidden_units=[100, 2],  # hidden_units=[100,2]
                           shuffle_batch=True,
-                          n_epochs=2,  # 20
+                          n_epochs=20,  # 20
                           sqr_norm_lim=9,
                           non_static=non_static,
                           batch_size=50,
                           dropout_rate=[0.4],
                           pi_params=[0.95, 0],
                           C=6.,
-                          patience=5)  # 20
+                          patience=20)  # 20
     q_results.append(perf[0])
     p_results.append(perf[1])
     print 'teacher network q: ', str(np.mean(q_results))
